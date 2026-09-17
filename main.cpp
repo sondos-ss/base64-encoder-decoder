@@ -71,7 +71,7 @@ static std::string encode_tail(const std::string &tailBytes)
 
     if (tailBytes.size() == 2)
     {
-        n |= (tailBytes[1] << 8);
+        n |= ((unsigned char)tailBytes[1] << 8);
     }
     s += ALPHABET[(n >> 18) & 63];
     s += ALPHABET[(n >> 12) & 63];
