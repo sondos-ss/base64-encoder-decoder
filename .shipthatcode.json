@@ -1,0 +1,42 @@
+{
+  "course": "build-base64",
+  "language": "cpp",
+  "language_id": 54,
+  "entrypoint": "main.cpp",
+  "version": 1,
+  "content_hash": "e2fddd3e7f658321",
+  "lessons": [
+    {
+      "slug": "why",
+      "tests_hash": "9bf445a0f8bf"
+    },
+    {
+      "slug": "alphabet",
+      "tests_hash": "fa7108119edd"
+    },
+    {
+      "slug": "encode-3to4",
+      "tests_hash": "59f3b59a17c1"
+    },
+    {
+      "slug": "padding",
+      "tests_hash": "2ae1538d1751"
+    },
+    {
+      "slug": "decode-4to3",
+      "tests_hash": "e3aa7e9e6bde"
+    },
+    {
+      "slug": "errors",
+      "tests_hash": "b4d976b112b0"
+    },
+    {
+      "slug": "url-safe",
+      "tests_hash": "fc20e2dd9457"
+    },
+    {
+      "slug": "full-b64",
+      "tests_hash": "983cfbf14349"
+    }
+  ]
+}
