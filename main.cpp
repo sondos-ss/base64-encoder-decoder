@@ -10,8 +10,8 @@ using namespace std;
 // remainder, so no floating point is needed.
 static void b64_size(long long n, long long &chars, long long &pads) {
     (void)n;
-    chars = 4;
-    pads = 2;
+    chars=4*((n+2)/3);
+    pads=(n%3==0?0:3-n%3);
 }
 
 int main() {

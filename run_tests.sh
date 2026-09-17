@@ -93,8 +93,11 @@ for dir in tests/${FILTER}*/; do
   for input in "$dir"*.in; do
     [ -f "$input" ] || continue
     expected="${input%.in}.out"
-    actual="$(run_one "$input")"
-    if [ "$actual" = "$(cat "$expected")" ]; then
+
+    actual="$(run_one "$input" | sed 's/\r$//')"
+    expected_content="$(sed 's/\r$//' "$expected")"
+
+    if [ "$actual" = "$expected_content" ]; then
       pass=$((pass+1)); echo "PASS  $input"
     else
       fail=$((fail+1)); echo "FAIL  $input"
@@ -103,7 +106,6 @@ for dir in tests/${FILTER}*/; do
     fi
   done
 done
-
 echo
 echo "$pass passed, $fail failed"
 [ "$fail" -eq 0 ]
