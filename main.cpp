@@ -67,7 +67,7 @@ static std::string encode_tail(const std::string &tailBytes)
     // block, read off 2 fields (1 byte) or 3 fields (2 bytes) with (n >> k) & 63,
     // then a"ppend '=' until the block is 4 characters.
     string s = "";
-    unsigned n = (unsigned char)tailBytes[0] << 16;
+    unsigned n = ((unsigned char)tailBytes[0] )<< 16;
 
     if (tailBytes.size() == 2)
     {
