@@ -37,40 +37,39 @@ static int alphabetValue(char c) {
 }
 
 
-int main() {
+string encode_group(unsigned b0, unsigned b1, unsigned b2)
+{
+    // TODO: pack b0, b1, b2 into one 24-bit number, cut four 6-bit fields out of
+    // it (most significant first) and return the four B64 characters.
+    // C++ hint: B64[i] is the character at index i; use <<, >>, | and & 63.
+    string s="";
+    int n=(b0<<16)|(b1<<8)|b2;
+    char f0=ALPHABET[(n>>18)&63];
+    s+=f0;
+    char f1=ALPHABET[(n>>12)&63];
+    s+=f1;
+    char f2=ALPHABET[(n>>6)&63];
+    s+=f2;
+    char f3=ALPHABET[n&63];
+    s+=f3;
+    return s;
+}
+
+int main()
+{
     ios::sync_with_stdio(false);
-    string line, out;
+    string line;
     while (getline(cin, line)) {
-        while (!line.empty() && (line[line.size() - 1] == '\r' || line[line.size() - 1] == '\n')) {
+        while (!line.empty() && (line[line.size() - 1] == '\r' || line[line.size() - 1] == '\n'))
             line.erase(line.size() - 1);
-        }
         if (line.empty()) continue;
-        size_t sp = line.find(' ');
-        string cmd = (sp == string::npos) ? line : line.substr(0, sp);
-        string arg = (sp == string::npos) ? string("") : line.substr(sp + 1);
-        if (cmd == "CHAR") {
-            char *end = NULL;
-            long n = strtol(arg.c_str(), &end, 10);
-            if (arg.empty() || *end != '\0') {
-                out += "INVALID\n";
-                continue;
-            }
-            char ch = alphabetChar(n);
-            if (ch == 0) {
-                out += "INVALID\n";
-            } else {
-                out += ch;
-                out += '\n';
-            }
-        } else if (cmd == "VAL") {
-            int v = (arg.size() == 1) ? alphabetValue(arg[0]) : -1;
-            if (v < 0) out += "INVALID\n";
-            else {
-                out += to_string(v);
-                out += '\n';
-            }
-        }
+        vector<unsigned> data;
+        for (size_t i = 0; i + 1 < line.size(); i += 2)
+            data.push_back((unsigned)strtoul(line.substr(i, 2).c_str(), NULL, 16));
+        string out;
+        for (size_t i = 0; i + 2 < data.size(); i += 3)
+            out += encode_group(data[i], data[i + 1], data[i + 2]);
+        cout << out << "\n";
     }
-    cout << out;
     return 0;
 }
