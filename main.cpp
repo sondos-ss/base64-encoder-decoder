@@ -67,7 +67,7 @@ static std::string encode_tail(const std::string &tailBytes)
     // block, read off 2 fields (1 byte) or 3 fields (2 bytes) with (n >> k) & 63,
     // then a"ppend '=' until the block is 4 characters.
     string s = "";
-    unsigned n = ((unsigned char)tailBytes[0] )<< 16;
+    unsigned n = ((unsigned char)tailBytes[0]) << 16;
 
     if (tailBytes.size() == 2)
     {
@@ -112,27 +112,69 @@ static std::string encode(const std::string &data)
     return out;
 }
 
+static int char_value(char c)
+{
+    size_t p = ALPHABET.find(c);
+    if (p == string::npos)
+        return -1;
+    return (int)p;
+}
+
+// Return the byte values (0-255) that this 4-character group carries.
+static vector<int> decode_group(const string &group)
+{
+    // TODO: count the '=' characters in the group, turn each character into its
+    // 6-bit value with char_value (use 0 for '='), pack the four values into one
+    // 24-bit int, then cut three bytes out of it, most significant first, and
+    // return the first (3 - pad) of them.
+    // Hint: vector<int> three(...); three.resize(3 - pad); cuts the tail off.
+    int pad = 0;
+
+    for (char c : group)
+        if (c == '=')
+            pad++;
+
+    int v0 = group[0] == '=' ? 0 : char_value(group[0]);
+    int v1 = group[1] == '=' ? 0 : char_value(group[1]);
+    int v2 = group[2] == '=' ? 0 : char_value(group[2]);
+    int v3 = group[3] == '=' ? 0 : char_value(group[3]);
+
+    int n = (v0 << 18) | (v1 << 12) | (v2 << 6) | v3;
+
+    int b0 = (n >> 16) & 255;
+    int b1 = (n >> 8) & 255;
+    int b2 = n & 255;
+
+    vector<int> three = {b0, b1, b2};
+    three.resize(3 - pad);
+
+    return three;
+}
+
 int main()
 {
-    std::ios::sync_with_stdio(false);
-    std::string line;
-    std::string result;
-    while (std::getline(std::cin, line))
+    string line;
+    while (getline(cin, line))
     {
-        while (!line.empty() && (line[line.size() - 1] == '\r' || line[line.size() - 1] == ' '))
+        while (!line.empty() && (line[line.size() - 1] == '\r' || line[line.size() - 1] == '\n'))
         {
             line.erase(line.size() - 1);
         }
         if (line.empty())
             continue;
-        std::string data;
-        for (size_t j = 0; j + 1 < line.size(); j += 2)
+        string hex;
+        char buf[8];
+        for (size_t i = 0; i + 4 <= line.size(); i += 4)
         {
-            data += (char)((hexval(line[j]) << 4) | hexval(line[j + 1]));
+            vector<int> bytes = decode_group(line.substr(i, 4));
+            for (size_t j = 0; j < bytes.size(); j++)
+            {
+                // %02x prints one byte as exactly two lowercase hex digits.
+                sprintf(buf, "%02x", bytes[j] & 255);
+                hex += buf;
+            }
         }
-        result += encode(data);
-        result += "\n";
+        printf("%s\n", hex.c_str());
     }
-    std::cout << result;
     return 0;
 }
