@@ -195,9 +195,9 @@ static string validate(const string &s)
             return "char";
     }
 
-        int pads = 0;
+    int pads = 0;
 
-    for (int i = s.size() - 1;i >= 0 && s[i] == '=';i--)
+    for (int i = s.size() - 1; i >= 0 && s[i] == '='; i--)
     {
         pads++;
     }
@@ -227,25 +227,213 @@ static string validate(const string &s)
     return "ok";
 }
 
+static const string STD = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+static const string URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+static const string HEXDIGITS = "0123456789abcdef";
+
+// Lesson 2's character lookup: 0-63, or -1 when c is not in this alphabet.
+int alphabetIndex(const string &alphabet, char c)
+{
+    size_t p = alphabet.find(c);
+    return p == string::npos ? -1 : (int)p;
+}
+
+// Lesson 4's finished standard encoder: '+', '/', and '=' padding.
+string encodeStd(const vector<unsigned char> &data)
+{
+    string out;
+    size_t i = 0;
+    while (i + 3 <= data.size())
+    {
+        unsigned long v = ((unsigned long)data[i] << 16) | ((unsigned long)data[i + 1] << 8) | (unsigned long)data[i + 2];
+        out += STD[(v >> 18) & 63];
+        out += STD[(v >> 12) & 63];
+        out += STD[(v >> 6) & 63];
+        out += STD[v & 63];
+        i += 3;
+    }
+    size_t rest = data.size() - i;
+    if (rest == 1)
+    {
+        unsigned long v = (unsigned long)data[i] << 16;
+        out += STD[(v >> 18) & 63];
+        out += STD[(v >> 12) & 63];
+        out += "==";
+    }
+    else if (rest == 2)
+    {
+        unsigned long v = ((unsigned long)data[i] << 16) | ((unsigned long)data[i + 1] << 8);
+        out += STD[(v >> 18) & 63];
+        out += STD[(v >> 12) & 63];
+        out += STD[(v >> 6) & 63];
+        out += '=';
+    }
+    return out;
+}
+
+// Lesson 5's group decoder. text is a multiple of 4 with its '=' written out.
+vector<unsigned char> decodeGroups(const string &text, const string &alphabet)
+{
+    vector<unsigned char> out;
+    for (size_t i = 0; i < text.size(); i += 4)
+    {
+        unsigned long v = 0;
+        int pads = 0;
+        for (int j = 0; j < 4; j++)
+        {
+            char c = text[i + j];
+            if (c == '=')
+            {
+                pads++;
+                v <<= 6;
+            }
+            else
+            {
+                v = (v << 6) | (unsigned long)alphabetIndex(alphabet, c);
+            }
+        }
+        unsigned char triple[3] = {(unsigned char)((v >> 16) & 255), (unsigned char)((v >> 8) & 255), (unsigned char)(v & 255)};
+        for (int k = 0; k < 3 - pads; k++)
+            out.push_back(triple[k]);
+    }
+    return out;
+}
+
+string toHex(const vector<unsigned char> &b)
+{
+    string s;
+    for (size_t i = 0; i < b.size(); i++)
+    {
+        s += HEXDIGITS[b[i] >> 4];
+        s += HEXDIGITS[b[i] & 15];
+    }
+    return s;
+}
+
+int hexVal(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    return 0;
+}
+
+vector<unsigned char> fromHex(const string &s)
+{
+    vector<unsigned char> out;
+    for (size_t i = 0; i + 1 < s.size(); i += 2)
+        out.push_back((unsigned char)(hexVal(s[i]) * 16 + hexVal(s[i + 1])));
+    return out;
+}
+
+// Base64url: the same bits, index 62 as '-', index 63 as '_', and no '=' at all.
+string encodeUrl(const vector<unsigned char> &data)
+{
+    // TODO: substitute the two characters and strip the padding.
+    // Hint: walk the result of encodeStd rewriting '+' and '/', then erase the
+    // trailing '=' with a while loop on out.back().
+    string out = encodeStd(data);
+    for (char &c : out)
+    {
+        if (c == '+')
+            c = '-';
+        else if (c == '/')
+            c = '_';
+    }
+    while (!out.empty() && out.back() == '=')
+        out.pop_back();
+    return out;
+}
+
+// Return the decoded bytes as lowercase hex, or the word INVALID, a space, then one reason word.
+string decodeUrl(const string &text)
+{
+    // TODO: lesson 6's four rules in lesson 6's order (length, char, padding, bits)
+    // against URL, then recover the dropped pads from text.size() % 4 and call
+    // decodeGroups(data + string(pads, '='), URL), then toHex.
+    if (text.size() % 4 == 1)
+        return "INVALID length";
+    for (char c : text)
+    {
+        if (c != '=' && alphabetIndex(URL, c) == -1)
+            return "INVALID char";
+    }
+    int pads = 0;
+    int total = 0;
+
+    for (char c : text)
+    {
+        if (c == '=')
+            total++;
+    }
+
+    for (int i = (int)text.size() - 1;
+         i >= 0 && text[i] == '=';
+         i--)
+    {
+        pads++;
+    }
+
+    if (total > 0)
+    {
+        if (pads < 1 || pads > 2 ||
+            text.size() % 4 != 0 ||
+            total != pads)
+        {
+            return "INVALID padding";
+        }
+    }
+    else
+    {
+        int rem = text.size() % 4;
+
+        if (rem == 0)
+            pads = 0;
+        else if (rem == 2)
+            pads = 2;
+        else
+            pads = 1;
+    }
+    if (pads > 0)
+    {
+        int pos = (int)text.size() - pads - 1;
+        int v = alphabetIndex(URL, text[pos]);
+
+        if (pads == 1 && v % 4 != 0)
+            return "INVALID bits";
+
+        if (pads == 2 && v % 16 != 0)
+            return "INVALID bits";
+    }
+
+    string data = text;
+
+    if (total == 0)
+        data += string(pads, '=');
+
+    return toHex(decodeGroups(data, URL));
+}
+
 int main()
 {
     ios::sync_with_stdio(false);
     string line;
     while (getline(cin, line))
     {
-        while (!line.empty() && (line[line.size() - 1] == '\n' || line[line.size() - 1] == '\r'))
-        {
-            line.erase(line.size() - 1);
-        }
-        string reason = validate(line);
-        if (reason == "ok")
-        {
-            cout << decodeHex(line) << "\n";
-        }
-        else
-        {
-            cout << "INVALID " << reason << "\n";
-        }
+        while (!line.empty() && (line.back() == '\n' || line.back() == '\r'))
+            line.pop_back();
+        if (line.empty())
+            continue;
+        size_t sp = line.find(' ');
+        if (sp == string::npos)
+            continue;
+        string cmd = line.substr(0, sp);
+        string arg = line.substr(sp + 1);
+        if (cmd == "ENCODE_URL")
+            cout << encodeUrl(fromHex(arg)) << "\n";
+        else if (cmd == "DECODE_URL")
+            cout << decodeUrl(arg) << "\n";
     }
     return 0;
 }
