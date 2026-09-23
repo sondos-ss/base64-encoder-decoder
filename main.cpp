@@ -397,7 +397,13 @@ string decodeUrl(const string &text)
     }
     if (pads > 0)
     {
-        int pos = (int)text.size() - pads - 1;
+        int pos;
+
+        if (total > 0)
+            pos =text.size() - pads - 1;
+        else
+            pos = text.size() - 1;
+
         int v = alphabetIndex(URL, text[pos]);
 
         if (pads == 1 && v % 4 != 0)
@@ -406,7 +412,6 @@ string decodeUrl(const string &text)
         if (pads == 2 && v % 16 != 0)
             return "INVALID bits";
     }
-
     string data = text;
 
     if (total == 0)
