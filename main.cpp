@@ -30,7 +30,7 @@ static char alphabetChar(long index)
 }
 
 // Return the 0..63 index of the character c, or -1 when c is not in ALPHABET.
-static int alphabetValue(char c)
+static int charValue(char c)
 {
     // TODO: find the position of c among the 64 characters.
     // Hint: a for loop from 0 to 63 comparing ALPHABET[i] to c is enough; '='
@@ -150,31 +150,102 @@ static vector<int> decode_group(const string &group)
 
     return three;
 }
+// Lesson 5: decode an already-validated string to lowercase hex. The shifts
+// and masks here are lesson 5's; leave this function as it is.
+static string decodeHex(const string &s)
+{
+    string out;
+    char buf[8];
+    for (size_t i = 0; i < s.size(); i += 4)
+    {
+        int pads = 0;
+        long n = 0;
+        for (int j = 0; j < 4; j++)
+        {
+            if (s[i + j] == '=')
+                pads++;
+        }
+        for (int j = 0; j < 4; j++)
+        {
+            int v = (s[i + j] == '=') ? 0 : charValue(s[i + j]);
+            n = (n << 6) | v;
+        }
+        int bytes[3] = {(int)((n >> 16) & 255), (int)((n >> 8) & 255), (int)(n & 255)};
+        for (int j = 0; j < 3 - pads; j++)
+        {
+            sprintf(buf, "%02x", bytes[j]);
+            out += buf;
+        }
+    }
+    return out;
+}
+
+static string validate(const string &s)
+{
+    // TODO: return "ok", or the first failing word of length, char, padding,
+    // bits, in that order. Hint: s.size() gives the count and charValue(c)
+    // returns -1 for a character outside the alphabet.
+    if (s.size() % 4 != 0)
+    {
+        return "length";
+    }
+    for (char c : s)
+    {
+        if (c != '=' && charValue(c) == -1)
+            return "char";
+    }
+
+        int pads = 0;
+
+    for (int i = s.size() - 1;i >= 0 && s[i] == '=';i--)
+    {
+        pads++;
+    }
+
+    int total = 0;
+
+    for (char c : s)
+    {
+        if (c == '=')
+            total++;
+    }
+
+    if (pads > 2 || total != pads)
+        return "padding";
+    if (pads > 0)
+    {
+        int pos = (int)s.size() - pads - 1;
+        int v = charValue(s[pos]);
+
+        if (pads == 1 && (v & 3) != 0)
+            return "bits";
+
+        if (pads == 2 && (v & 15) != 0)
+            return "bits";
+    }
+
+    return "ok";
+}
 
 int main()
 {
+    ios::sync_with_stdio(false);
     string line;
     while (getline(cin, line))
     {
-        while (!line.empty() && (line[line.size() - 1] == '\r' || line[line.size() - 1] == '\n'))
+        while (!line.empty() && (line[line.size() - 1] == '\n' || line[line.size() - 1] == '\r'))
         {
             line.erase(line.size() - 1);
         }
-        if (line.empty())
-            continue;
-        string hex;
-        char buf[8];
-        for (size_t i = 0; i + 4 <= line.size(); i += 4)
+        string reason = validate(line);
+        if (reason == "ok")
         {
-            vector<int> bytes = decode_group(line.substr(i, 4));
-            for (size_t j = 0; j < bytes.size(); j++)
-            {
-                // %02x prints one byte as exactly two lowercase hex digits.
-                sprintf(buf, "%02x", bytes[j] & 255);
-                hex += buf;
-            }
+            cout << decodeHex(line) << "\n";
         }
-        printf("%s\n", hex.c_str());
+        else
+        {
+            cout << "INVALID " << reason << "\n";
+        }
     }
     return 0;
 }
